@@ -7,17 +7,28 @@ const ONBOARDING_KEY = "thoth:onboarding";
 
 export interface OnboardingPrefs {
   completed: boolean;
+  name: string;
+  avatarUri: string | null;
   selectedCategories: string[];
 }
 
 export async function getOnboardingPrefs(): Promise<OnboardingPrefs> {
   const raw = await AsyncStorage.getItem(ONBOARDING_KEY);
-  return raw ? (JSON.parse(raw) as OnboardingPrefs) : { completed: false, selectedCategories: [] };
+  const defaults: OnboardingPrefs = { completed: false, name: "", avatarUri: null, selectedCategories: [] };
+  if (!raw) return defaults;
+  return { ...defaults, ...(JSON.parse(raw) as Partial<OnboardingPrefs>) };
 }
 
-export async function completeOnboarding(selectedCategories: string[]): Promise<void> {
-  const prefs: OnboardingPrefs = { completed: true, selectedCategories };
+export async function completeOnboarding(
+  name: string,
+  avatarUri: string | null,
+  selectedCategories: string[]
+): Promise<void> {
+  const prefs: OnboardingPrefs = { completed: true, name, avatarUri, selectedCategories };
   await AsyncStorage.setItem(ONBOARDING_KEY, JSON.stringify(prefs));
+}
+export async function resetOnboarding(): Promise<void> {
+  await AsyncStorage.removeItem(ONBOARDING_KEY);
 }
 
 export async function getSessions(): Promise<Session[]> {

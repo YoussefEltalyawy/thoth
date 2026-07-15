@@ -1,0 +1,47 @@
+workflows:
+  ios-unsigned:
+    name: Thoth iOS Unsigned Build (for SideStore)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      node: 20.11.0
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Install npm dependencies
+        script: npm install --legacy-peer-deps
+      - name: Prebuild native iOS project
+        script: npx expo prebuild --platform ios --clean
+      - name: Install CocoaPods dependencies
+        script: cd ios && pod install
+      - name: Build unsigned .app
+        script: |
+          cd ios
+          xcodebuild -workspace Thoth.xcworkspace \
+            -scheme Thoth \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package unsigned ipa
+        script: |
+          cd ios/build/Build/Products/Release-iphoneos
+          mkdir -p Payload
+          cp -r Thoth.app Payload/
+          zip -r "$CM_BUILD_DIR/Thoth-unsigned.ipa" Payload
+    artifacts:
+      - Thoth-unsigned.ipa
+    publishing:
+      email:
+        recipients:
+          - talyayw@proton.me
+        notify:
+          success: true
+          failure: true

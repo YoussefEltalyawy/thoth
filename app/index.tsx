@@ -10,7 +10,7 @@ import { TodayReadingCard } from "@/components/TodayReadingCard";
 import { StatCard } from "@/components/StatCard";
 import { PassageListItem } from "@/components/PassageListItem";
 import { topics } from "@/data/topics";
-import { getStreak, getOnboardingPrefs } from "@/services/storage";
+import { getStreak, getOnboardingPrefs, resetOnboarding } from "@/services/storage";
 import { StreakState } from "@/types";
 
 function getGreeting(): string {
@@ -29,6 +29,8 @@ export default function HomeScreen() {
     totalSessions: 0,
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [name, setName] = useState("");
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   useFocusEffect(
@@ -41,6 +43,8 @@ export default function HomeScreen() {
           return;
         }
         setSelectedCategories(prefs.selectedCategories);
+        setName(prefs.name);
+        setAvatarUri(prefs.avatarUri);
         setCheckingOnboarding(false);
       });
       getStreak().then(setStreak);
@@ -75,11 +79,13 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Image
-              source={{ uri: "https://i.pravatar.cc/150?u=thoth-user" }}
+              source={{ uri: avatarUri ?? "https://i.pravatar.cc/150?u=thoth-user" }}
               style={styles.avatar}
             />
             <View>
-              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.greeting}>
+                {getGreeting()} {name.trim() ? name.trim().split(" ")[0] : ""}
+              </Text>
               <StreakBadge days={streak.currentStreak} />
             </View>
           </View>
@@ -122,6 +128,18 @@ export default function HomeScreen() {
             />
           ))}
         </View>
+
+        {__DEV__ && (
+          <Pressable
+            style={styles.devResetButton}
+            onPress={async () => {
+              await resetOnboarding();
+              router.replace("/onboarding");
+            }}
+          >
+            <Text style={styles.devResetText}>Reset onboarding (dev)</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -154,4 +172,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statsRow: { flexDirection: "row", gap: 12, marginVertical: 20 },
+  devResetButton: { alignItems: "center", marginTop: 24, paddingVertical: 10 },
+  devResetText: { fontFamily: typography.sans, fontSize: typography.sizes.xs, color: colors.inkFaint, textDecorationLine: "underline" },
 });
