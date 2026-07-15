@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Thoth",
+    "slug": "thoth",
+    "scheme": "thoth",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "backgroundColor": "#F5F2EA"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.talyawy.thoth",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Thoth needs your microphone to record your speaking practice sessions.",
+        "NSSpeechRecognitionUsageDescription": "Thoth uses on-device speech recognition to analyze your pace, pauses, and filler words."
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-speech-recognition"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
