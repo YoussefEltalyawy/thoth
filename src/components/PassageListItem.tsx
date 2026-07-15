@@ -10,6 +10,8 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Discipline: "scan-outline",
   "Human Nature": "walk-outline",
   Ethics: "leaf-outline",
+  Psychology: "people-outline",
+  Science: "flask-outline",
 };
 
 export function PassageListItem({ topic, onPress }: { topic: Topic; onPress: () => void }) {

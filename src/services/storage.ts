@@ -93,3 +93,24 @@ async function updateStreakForNewSession(dateISO: string): Promise<void> {
 
   await AsyncStorage.setItem(STREAK_KEY, JSON.stringify(next));
 }
+
+const BOOKMARKS_KEY = "thoth:bookmarks";
+
+export async function getBookmarks(): Promise<string[]> {
+  const raw = await AsyncStorage.getItem(BOOKMARKS_KEY);
+  return raw ? (JSON.parse(raw) as string[]) : [];
+}
+
+export async function toggleBookmark(topicId: string): Promise<boolean> {
+  const bookmarks = await getBookmarks();
+  const index = bookmarks.indexOf(topicId);
+  let isBookmarked = false;
+  if (index === -1) {
+    bookmarks.push(topicId);
+    isBookmarked = true;
+  } else {
+    bookmarks.splice(index, 1);
+  }
+  await AsyncStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+  return isBookmarked;
+}

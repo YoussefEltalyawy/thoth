@@ -10,15 +10,16 @@ interface Props {
   imageUrl: string;
   onStart: () => void;
   onBookmark?: () => void;
+  isBookmarked?: boolean;
 }
 
-export function TodayReadingCard({ topic, imageUrl, onStart, onBookmark }: Props) {
+export function TodayReadingCard({ topic, imageUrl, onStart, onBookmark, isBookmarked }: Props) {
   return (
     <View style={styles.card}>
       <ImageBackground source={{ uri: imageUrl }} style={styles.image} imageStyle={styles.imageRadius}>
         <View style={styles.imageOverlayRow}>
           <View style={styles.pill}>
-            <Ionicons name="location-outline" size={12} color={colors.pillText} />
+            <Ionicons name="bulb-outline" size={12} color={colors.pillText} />
             <Text style={styles.pillText}>{topic.category}</Text>
           </View>
           <View style={styles.pill}>
@@ -39,9 +40,15 @@ export function TodayReadingCard({ topic, imageUrl, onStart, onBookmark }: Props
           <Pressable style={styles.startButton} onPress={onStart}>
             <Text style={styles.startButtonText}>Start Reading</Text>
           </Pressable>
-          <Pressable style={styles.bookmarkButton} onPress={onBookmark}>
-            <Ionicons name="bookmark-outline" size={20} color={colors.ink} />
-          </Pressable>
+          {onBookmark && (
+            <Pressable style={styles.bookmarkButton} onPress={onBookmark}>
+              <Ionicons
+                name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                size={20}
+                color={isBookmarked ? colors.accentAmber : colors.ink}
+              />
+            </Pressable>
+          )}
         </View>
       </View>
     </View>

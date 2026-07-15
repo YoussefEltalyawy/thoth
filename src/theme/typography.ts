@@ -6,7 +6,8 @@ import { Platform } from "react-native";
 // via expo-font — kept as system fonts here so the scaffold runs
 // with zero extra asset setup.
 export const typography = {
-  serif: Platform.select({ ios: "Georgia", android: "serif", default: "serif" }),
+  // BpmfZihiKaiStd is loaded in production builds; Expo Go falls back to system serif.
+  serif: "BpmfZihiKaiStd",
   sans: Platform.select({ ios: "System", android: "sans-serif", default: "System" }),
 
   sizes: {

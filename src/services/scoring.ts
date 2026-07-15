@@ -3,17 +3,40 @@ import { SessionMetrics, Transcript } from "@/types";
 // English filler list for Phase 1. Each language track gets its own
 // list — do not extend this one when Arabic tracks are added in
 // Phase 2, add a sibling list per the plan doc instead.
+//
+// NOTE: iOS on-device ASR may silently drop some fillers with smart
+// formatting enabled. We set iosTaskHint:"unspecified" in speechRecognition.ts
+// to maximize pass-through, and also scan the raw text here to catch
+// any that slipped through as part of a longer token.
 const FILLER_WORDS_EN = new Set([
-  "um",
-  "umm",
-  "uh",
-  "uhh",
+  // Hesitation sounds
+  "um", "umm", "ummm",
+  "uh", "uhh",
+  "er", "err",
+  "ugh",
+  "hmm", "hm", "hmm",
+  "huh",
+  "ah", "ahh",
+  // Conversational fillers
   "like",
-  "you know",
-  "so",
   "basically",
   "actually",
+  "literally",
+  "obviously",
+  "seriously",
+  "honestly",
+  "right",
+  "okay",
+  "well",
+  "so",
+  "anyway",
+  "anyways",
+  "you know",
   "i mean",
+  "i think",
+  "kind of",
+  "sort of",
+  "you see",
 ]);
 
 const NOTABLE_PAUSE_MS = 500;
