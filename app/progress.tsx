@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/colors";
 import { typography } from "@/theme/typography";
 import { getSessions, getStreak } from "@/services/storage";
@@ -9,6 +10,7 @@ import { getTopicById } from "@/data/topics";
 import { Session, StreakState } from "@/types";
 
 export default function ProgressScreen() {
+  const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [streak, setStreak] = useState<StreakState | null>(null);
 
@@ -22,7 +24,12 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Your progress</Text>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={22} color={colors.ink} />
+          </Pressable>
+          <Text style={styles.title}>Your progress</Text>
+        </View>
         {streak ? (
           <Text style={styles.subtitle}>
             {streak.currentStreak}-day streak · {streak.totalSessions} sessions total
@@ -60,6 +67,16 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: 20, paddingTop: 40, paddingBottom: 40 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 4 },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   title: { fontFamily: typography.serif, fontSize: typography.sizes.xxl, color: colors.ink, fontWeight: "700" },
   subtitle: { fontFamily: typography.sans, fontSize: typography.sizes.sm, color: colors.inkMuted, marginTop: 6, marginBottom: 24 },
   empty: { fontFamily: typography.sans, fontSize: typography.sizes.sm, color: colors.inkMuted, marginTop: 20 },

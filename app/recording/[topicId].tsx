@@ -72,7 +72,7 @@ function computeWordStates(passageWords: string[], spokenText: string): WordStat
     } else {
       // Look ahead in passage for the spoken word (handles skipped words)
       let foundAhead = false;
-      for (let look = 1; look <= 3 && pi + look < cleanPassage.length; look++) {
+      for (let look = 1; look <= 6 && pi + look < cleanPassage.length; look++) {
         if (cleanSpoken[si] === cleanPassage[pi + look]) {
           for (let k = 0; k < look; k++) states[pi + k] = "incorrect";
           states[pi + look] = "correct";

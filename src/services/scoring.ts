@@ -46,9 +46,21 @@ const LONG_PAUSE_MS = 1500;
 // range per track rather than reusing this number for Arabic.
 const WPM_TARGET_RANGE: [number, number] = [120, 150];
 
+// The `words` array (from ASR segments) is unreliable on-device — iOS's
+// segment reporting is sparse and sometimes only captures a fraction of
+// what was actually said, especially on longer continuous sessions. The
+// full transcript TEXT is what's actually reliable, so word count (and
+// therefore WPM and filler rate) is derived from splitting the text, not
+// from counting segment entries. The `words` timing array is kept only
+// for pause detection and confidence, which degrade gracefully when sparse.
+export function getTextWordCount(transcript: Transcript): number {
+  const trimmed = transcript.text.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
 export function computeWordsPerMinute(transcript: Transcript, durationMs: number): number {
   if (durationMs <= 0) return 0;
-  const wordCount = transcript.words.length;
+  const wordCount = getTextWordCount(transcript);
   return Math.round((wordCount / durationMs) * 60000);
 }
 
@@ -77,8 +89,13 @@ export function countPauses(transcript: Transcript): { pauseCount: number; longP
   return { pauseCount, longPauseCount };
 }
 
+// Defaults to a neutral, non-punishing value when no word-level confidence
+// data is available — previously this returned 0 whenever the segments
+// array was empty (very common on-device), which tanked the composite
+// score through no fault of the actual speech. Missing instrumentation
+// should never read as "you did badly."
 export function averageConfidence(transcript: Transcript): number {
-  if (transcript.words.length === 0) return 0;
+  if (transcript.words.length === 0) return 0.85;
   const sum = transcript.words.reduce((acc, w) => acc + w.confidence, 0);
   return sum / transcript.words.length;
 }
@@ -89,7 +106,7 @@ export function averageConfidence(transcript: Transcript): number {
 export function computeMetrics(transcript: Transcript, durationMs: number): SessionMetrics {
   const wordsPerMinute = computeWordsPerMinute(transcript, durationMs);
   const fillerCount = countFillers(transcript);
-  const wordCount = Math.max(transcript.words.length, 1);
+  const wordCount = Math.max(getTextWordCount(transcript), 1);
   const fillerRate = (fillerCount / wordCount) * 100;
   const { pauseCount, longPauseCount } = countPauses(transcript);
   const confidence = averageConfidence(transcript);
@@ -194,20 +211,24 @@ export interface HighlightedWord {
 
 // Drives the "What Thoth heard" transcript view — flags each word as
 // filler/not, and flags the gap before it as a notable/long pause.
+// Built from transcript.text (reliable) rather than the words/segments
+// array (often sparse on-device) — pause markers are layered on only
+// when the segment timing array actually lines up with the text, so we
+// never show a confident-looking pause marker backed by misaligned data.
 export function buildHighlightedTranscript(transcript: Transcript): HighlightedWord[] {
-  const result: HighlightedWord[] = [];
-  for (let i = 0; i < transcript.words.length; i++) {
-    const w = transcript.words[i];
-    const isFiller = FILLER_WORDS_EN.has(w.word.toLowerCase().replace(/[.,!?]/g, ""));
+  const textWords = transcript.text.trim() ? transcript.text.trim().split(/\s+/) : [];
+  const timingAligns = transcript.words.length === textWords.length;
+
+  return textWords.map((word, i) => {
+    const isFiller = FILLER_WORDS_EN.has(word.toLowerCase().replace(/[.,!?]/g, ""));
 
     let pauseBefore: PauseMarker = "none";
-    if (i > 0) {
-      const gap = w.startMs - transcript.words[i - 1].endMs;
+    if (timingAligns && i > 0) {
+      const gap = transcript.words[i].startMs - transcript.words[i - 1].endMs;
       if (gap >= LONG_PAUSE_MS) pauseBefore = "long";
       else if (gap >= NOTABLE_PAUSE_MS) pauseBefore = "short";
     }
 
-    result.push({ word: w.word, isFiller, pauseBefore });
-  }
-  return result;
+    return { word, isFiller, pauseBefore };
+  });
 }

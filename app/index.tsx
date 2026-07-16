@@ -73,8 +73,19 @@ export default function HomeScreen() {
     ];
   }, [selectedCategories]);
 
-  const featuredTopic = orderedTopics[0];
-  const explorePassages = orderedTopics.slice(1);
+  // "Today's Reading" rotates once per calendar day rather than being
+  // pinned to the same topic every time the app opens. Stable within a
+  // day (same dayIndex all day), changes at midnight.
+  const dayIndex = useMemo(() => Math.floor(Date.now() / 86400000), []);
+
+  const featuredPool = useMemo(() => {
+    const readingOnly = orderedTopics.filter((t) => t.contentType === "reading");
+    return readingOnly.length > 0 ? readingOnly : orderedTopics;
+  }, [orderedTopics]);
+
+  const featuredTopic =
+    featuredPool.length > 0 ? featuredPool[dayIndex % featuredPool.length] : undefined;
+  const explorePassages = orderedTopics.filter((t) => t.id !== featuredTopic?.id);
 
   // Filter topics for the explore list
   const filteredTopics = useMemo(() => {
@@ -87,7 +98,7 @@ export default function HomeScreen() {
     return explorePassages;
   }, [explorePassages, filterCategory, bookmarks]);
 
-  const isFeaturedBookmarked = bookmarks.includes(featuredTopic?.id);
+  const isFeaturedBookmarked = featuredTopic ? bookmarks.includes(featuredTopic.id) : false;
 
   async function handleToggleFeaturedBookmark() {
     if (!featuredTopic) return;
@@ -151,7 +162,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionLabel}>Today's Featured Reading</Text>
             <TodayReadingCard
               topic={featuredTopic}
-              imageUrl={`https://picsum.photos/seed/${featuredTopic.id}/600/400`}
+              imageUrl={`https://picsum.photos/seed/${featuredTopic.id}-day${dayIndex}/600/400`}
               onStart={() => router.push(`/recording/${featuredTopic.id}`)}
               onBookmark={handleToggleFeaturedBookmark}
               isBookmarked={isFeaturedBookmarked}

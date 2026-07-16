@@ -51,6 +51,42 @@ export async function requestPermissions(): Promise<boolean> {
  * Throws if the native module is not linked — callers must check
  * isSpeechRecognitionAvailable() first.
  */
+function normalizeForCompare(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+}
+
+/**
+ * Merges a newly-finalized segment into the running transcript.
+ *
+ * iOS's on-device recognizer doesn't reliably behave one way: sometimes a
+ * "final" segment is a genuinely new chunk of speech (safe to append), but
+ * sometimes it's actually a re-statement of everything said so far in the
+ * session (appending would duplicate the whole thing — very likely the
+ * cause of highlighting drift, since duplicated text makes the word-aligner
+ * think far more was said than actually was, overshooting ahead into
+ * unspoken passage text). We detect which case we're in by checking
+ * whether one is a prefix of the other, rather than assuming either model.
+ */
+function mergeFinalSegment(cumulativeText: string, segmentText: string): string {
+  if (!segmentText) return cumulativeText;
+  if (!cumulativeText) return segmentText;
+
+  const normCum = normalizeForCompare(cumulativeText);
+  const normSeg = normalizeForCompare(segmentText);
+
+  if (normSeg.startsWith(normCum)) {
+    // segmentText already contains everything we had — it's the fuller
+    // version, not a new increment. Replace, don't append.
+    return segmentText;
+  }
+  if (normCum.startsWith(normSeg)) {
+    // segmentText is a shrunk/partial restatement of what we already have
+    // — keep what we've got, ignore this one.
+    return cumulativeText;
+  }
+  return `${cumulativeText} ${segmentText}`;
+}
+
 export function startRecording(
   languageCode: string = "en-US",
   onInterim?: InterimCallback
@@ -73,12 +109,9 @@ export function startRecording(
       const segmentText = (result.transcript ?? "").trim();
 
       if (event.isFinal) {
-        // Commit this segment to the running transcript
-        if (segmentText) {
-          cumulativeText = cumulativeText
-            ? `${cumulativeText} ${segmentText}`
-            : segmentText;
-        }
+        // Commit this segment to the running transcript — defensively,
+        // since we can't fully rely on this being a clean incremental delta.
+        cumulativeText = mergeFinalSegment(cumulativeText, segmentText);
 
         // Collect word-level timing metadata if the engine provides it
         const segments = result.segments ?? [];
@@ -94,12 +127,10 @@ export function startRecording(
 
         onInterim?.(cumulativeText);
       } else {
-        // Interim: show everything confirmed so far + current partial
-        const live = cumulativeText
-          ? segmentText
-            ? `${cumulativeText} ${segmentText}`
-            : cumulativeText
-          : segmentText;
+        // Interim: same defensive merge, applied to a throwaway preview
+        // string (doesn't mutate cumulativeText) — avoids the live view
+        // duplicating text the same way a bad final would.
+        const live = mergeFinalSegment(cumulativeText, segmentText);
         onInterim?.(live);
       }
     }
@@ -111,9 +142,14 @@ export function startRecording(
     continuous: true,
     requiresOnDeviceRecognition: true,
     addsPunctuation: false,
-    // Disable smart formatting so the engine doesn't silently strip
-    // filler words (um, uh, ugh) before we can score them.
-    iosTaskHint: "unspecified",
+    // EXPERIMENTAL: switched from "unspecified" to "dictation" — Apple's
+    // docs describe "dictation" as the most verbatim/literal transcription
+    // mode, which should in theory be more likely to preserve "um"/"uh"
+    // rather than cleaning them out. Untested against the alternative on
+    // a real device as of this change — if fillers still don't come
+    // through, this is a genuine on-device ASR limitation rather than a
+    // config issue, and the real fix is the planned Phase 2 Whisper swap.
+    iosTaskHint: "dictation",
   });
 
   return {
